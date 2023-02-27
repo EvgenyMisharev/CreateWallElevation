@@ -5,13 +5,16 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:CreateWallElevation"
              mc:Ignorable="d" 
-             Title="Развертки стен" Height="400" Width="300" 
-             MinHeight="400" MinWidth="300" MaxHeight="400" MaxWidth="300"
+             Title="Развертки стен" Height="560" Width="300" 
+             MinHeight="560" MinWidth="300" MaxHeight="560" MaxWidth="300"
              WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" KeyDown="CreateWallElevationWPF_KeyDown">
     <Grid>
         <Label x:Name="label_SelectTypeSectionFacade" Content="Выберите тип Разреза/Фасада" Margin="10,140,10,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="comboBox_SelectTypeSectionFacade" Margin="10,166,10,0" VerticalAlignment="Top" Height="26" VerticalContentAlignment="Center"/>
 
+        <ComboBox x:Name="comboBox_UseTemplate" Margin="10,223,10,0" VerticalAlignment="Top" Height="26" VerticalContentAlignment="Center" IsEnabled="False"/>
+        <CheckBox x:Name="checkBox_UseTemplate" Content="Использовать шаблон:" Margin="10,197,10,0" VerticalAlignment="Top" Height="26" VerticalContentAlignment="Center" Checked="checkBox_UseTemplate_Checked" Unchecked="checkBox_UseTemplate_Checked"/>
+        
         <GroupBox x:Name="groupBox_BuildBy" Header="Строить по:" Height="60" Margin="10,10,10,0" VerticalAlignment="Top">
             <Grid Margin="0">
                 <Grid.ColumnDefinitions>
@@ -32,6 +35,41 @@
                 <RadioButton x:Name="rbt_Facade" Content="Фасад" Grid.Column="2" Margin="0,0,30,0" HorizontalAlignment="Right" VerticalContentAlignment="Center" Padding="5,0,0,0" VerticalAlignment="Center" Checked="UseToBuildCheckedChanged"/>
             </Grid>
         </GroupBox>
+        <Label x:Name="label_Indent" Content="Отступ от грани" HorizontalAlignment="Left" Margin="10,260,0,0" VerticalAlignment="Top" Width="180" VerticalContentAlignment="Center" Padding="0" Height="26"/>
+        <TextBox x:Name="textBox_Indent" HorizontalAlignment="Right" Height="26" Margin="0,260,40,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="label_IndentMM" Content="мм" HorizontalAlignment="Right" Margin="0,260,10,0" VerticalAlignment="Top" Width="30" VerticalContentAlignment="Center" Padding="0" Height="26" HorizontalContentAlignment="Center"/>
+
+        <Label x:Name="label_IndentUp" Content="Отступ сверху" HorizontalAlignment="Left" Margin="10,290,0,0" VerticalAlignment="Top" Width="180" VerticalContentAlignment="Center" Padding="0" Height="26"/>
+        <TextBox x:Name="textBox_IndentUp" HorizontalAlignment="Right" Height="26" Margin="0,290,40,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="label_IndentUpMM" Content="мм" HorizontalAlignment="Right" Margin="0,290,10,0" VerticalAlignment="Top" Width="30" VerticalContentAlignment="Center" Padding="0" Height="26" HorizontalContentAlignment="Center"/>
+
+        <Label x:Name="label_IndentDown" Content="Отступ снизу" HorizontalAlignment="Left" Margin="10,320,0,0" VerticalAlignment="Top" Width="180" VerticalContentAlignment="Center" Padding="0" Height="26"/>
+        <TextBox x:Name="textBox_IndentDown" HorizontalAlignment="Right" Height="26" Margin="0,320,40,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="label_IndentDownMM" Content="мм" HorizontalAlignment="Right" Margin="0,320,10,0" VerticalAlignment="Top" Width="30" VerticalContentAlignment="Center" Padding="0" Height="26" HorizontalContentAlignment="Center"/>
+
+        <Label x:Name="label_ProjectionDepth" Content="Глубина проекции" HorizontalAlignment="Left" Margin="10,350,0,0" VerticalAlignment="Top" Width="180" VerticalContentAlignment="Center" Padding="0" Height="26"/>
+        <TextBox x:Name="textBox_ProjectionDepth" HorizontalAlignment="Right" Height="26" Margin="0,350,40,0" TextWrapping="Wrap" Text="500" VerticalAlignment="Top" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="label_ProjectionDepthMM" Content="мм" HorizontalAlignment="Right" Margin="0,350,10,0" VerticalAlignment="Top" Width="30" VerticalContentAlignment="Center" Padding="0" Height="26" HorizontalContentAlignment="Center"/>
+
+        <Label x:Name="label_CurveNumberOfSegments" Content="Число сегментов для кривой" HorizontalAlignment="Left" Margin="10,380,0,0" VerticalAlignment="Top" Width="180" VerticalContentAlignment="Center" Padding="0" Height="26"/>
+        <TextBox x:Name="textBox_CurveNumberOfSegments" HorizontalAlignment="Right" Height="26" Margin="0,380,40,0" TextWrapping="Wrap" Text="10" VerticalAlignment="Top" Width="50" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+        <Label x:Name="label_CurveNumberOfSegmentsCNT" Content="шт" HorizontalAlignment="Right" Margin="0,380,10,0" VerticalAlignment="Top" Width="30" VerticalContentAlignment="Center" Padding="0" Height="26" HorizontalContentAlignment="Center"/>
+
+        <Label x:Name="label_PlaceOnSheet" Content="Разместить на лист" Margin="10,410,10,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="comboBox_PlaceOnSheet" Margin="10,440,10,0" VerticalAlignment="Top" Height="26" VerticalContentAlignment="Center">
+            <ComboBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock>
+                        <TextBlock.Text>
+                            <MultiBinding StringFormat="{}{0} - {1}">
+                                <Binding Path="SheetNumber"/>
+                                <Binding Path="Name"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
 
         <Button x:Name="btn_Ok" Content="Ок" HorizontalAlignment="Right" Margin="0,0,125,10" VerticalAlignment="Bottom" Width="100" Height="25" Click="btn_Ok_Click"/>
         <Button x:Name="btn_Cancel" Content="Отмена" HorizontalAlignment="Right" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="100" Height="25" Click="btn_Cancel_Click"/>
