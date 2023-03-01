@@ -25,15 +25,88 @@ namespace CreateWallElevation
         public double ProjectionDepth;
         public int CurveNumberOfSegments;
         public ViewSheet SelectedViewSheet;
+
+        CreateWallElevationSettings CreateWallElevationSettingsItem;
         public CreateWallElevationWPF(Document doc, List<ViewSheet> viewSheetList)
         {
             Doc = doc;
+            CreateWallElevationSettingsItem = new CreateWallElevationSettings().GetSettings();
             InitializeComponent();
-            
             comboBox_PlaceOnSheet.ItemsSource = viewSheetList;
-            if (viewSheetList.Count != 0)
+
+            if (CreateWallElevationSettingsItem != null)
             {
-                comboBox_PlaceOnSheet.SelectedItem = comboBox_PlaceOnSheet.Items[0];
+                if(CreateWallElevationSettingsItem.SelectedBuildByName == "rbt_ByRoom")
+                {
+                    rbt_ByRoom.IsChecked = true;
+                }
+                else
+                {
+                    rbt_ByWall.IsChecked = true;
+                }
+
+                if (CreateWallElevationSettingsItem.SelectedUseToBuildName == "rbt_Section")
+                {
+                    rbt_Section.IsChecked = true;
+                }
+                else
+                {
+                    rbt_Facade.IsChecked = true;
+                }
+
+                if (ViewFamilyTypeList.Count != 0)
+                {
+                    if (ViewFamilyTypeList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.SelectedViewFamilyTypeName) != null)
+                    {
+                        comboBox_SelectTypeSectionFacade.SelectedItem = ViewFamilyTypeList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.SelectedViewFamilyTypeName);
+                    }
+                    else
+                    {
+                        comboBox_SelectTypeSectionFacade.SelectedItem = comboBox_SelectTypeSectionFacade.Items[0];
+                    }
+                }
+
+                if (CreateWallElevationSettingsItem.UseTemplate == true)
+                {
+                    checkBox_UseTemplate.IsChecked = true;
+
+                    if (ViewSectionTemplateList.Count != 0)
+                    {
+                        if (ViewSectionTemplateList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.ViewSectionTemplateName) != null)
+                        {
+                            comboBox_UseTemplate.SelectedItem = ViewSectionTemplateList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.ViewSectionTemplateName);
+                        }
+                        else
+                        {
+                            comboBox_UseTemplate.SelectedItem = comboBox_UseTemplate.Items[0];
+                        }
+                    }
+                }
+
+                textBox_Indent.Text = CreateWallElevationSettingsItem.Indent;
+                textBox_IndentUp.Text = CreateWallElevationSettingsItem.IndentUp;
+                textBox_IndentDown.Text = CreateWallElevationSettingsItem.IndentDown;
+                textBox_ProjectionDepth.Text = CreateWallElevationSettingsItem.ProjectionDepth;
+                textBox_CurveNumberOfSegments.Text = CreateWallElevationSettingsItem.CurveNumberOfSegments;
+
+                if (viewSheetList.Count != 0)
+                {
+                    if (viewSheetList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.SelectedViewSheetName) != null)
+                    {
+                        comboBox_PlaceOnSheet.SelectedItem = viewSheetList.FirstOrDefault(vft => vft.Name == CreateWallElevationSettingsItem.SelectedViewSheetName);
+                    }
+                    else
+                    {
+                        comboBox_PlaceOnSheet.SelectedItem = comboBox_PlaceOnSheet.Items[0];
+                    }
+                }
+            }
+            else
+            {
+                if (viewSheetList.Count != 0)
+                {
+                    comboBox_PlaceOnSheet.SelectedItem = comboBox_PlaceOnSheet.Items[0];
+                }
             }
         }
 
@@ -127,15 +200,26 @@ namespace CreateWallElevation
         }
         private void SaveSettings()
         {
+            CreateWallElevationSettingsItem = new CreateWallElevationSettings();
+
             SelectedViewFamilyType = comboBox_SelectTypeSectionFacade.SelectedItem as ViewFamilyType;
+            if(SelectedViewFamilyType != null)
+            {
+                CreateWallElevationSettingsItem.SelectedViewFamilyTypeName = SelectedViewFamilyType.Name;
+            }
+
             SelectedBuildByName = (groupBox_BuildBy.Content as System.Windows.Controls.Grid)
                 .Children.OfType<RadioButton>()
                 .FirstOrDefault(rb => rb.IsChecked.Value == true)
                 .Name;
+            CreateWallElevationSettingsItem.SelectedBuildByName = SelectedBuildByName;
+
             SelectedUseToBuildName = (groupBox_UseToBuild.Content as System.Windows.Controls.Grid)
                 .Children.OfType<RadioButton>()
                 .FirstOrDefault(rb => rb.IsChecked.Value == true)
                 .Name;
+            CreateWallElevationSettingsItem.SelectedUseToBuildName = SelectedUseToBuildName;
+
 #if R2019 || R2020 || R2021
 
             double.TryParse(textBox_Indent.Text, out Indent);
@@ -162,15 +246,26 @@ namespace CreateWallElevation
             double.TryParse(textBox_ProjectionDepth.Text, out ProjectionDepth);
             ProjectionDepth = UnitUtils.ConvertToInternalUnits(ProjectionDepth, UnitTypeId.Millimeters);
 #endif
+            CreateWallElevationSettingsItem.Indent = textBox_Indent.Text;
+            CreateWallElevationSettingsItem.IndentUp = textBox_IndentUp.Text;
+            CreateWallElevationSettingsItem.IndentDown = textBox_IndentDown.Text;
+            CreateWallElevationSettingsItem.ProjectionDepth = textBox_ProjectionDepth.Text;
+
             UseTemplate = (bool)checkBox_UseTemplate.IsChecked;
+            CreateWallElevationSettingsItem.UseTemplate = UseTemplate;
             if (UseTemplate)
             {
                 ViewSectionTemplate = comboBox_UseTemplate.SelectedItem as ViewSection;
+                CreateWallElevationSettingsItem.ViewSectionTemplateName = ViewSectionTemplate.Name;
             }
 
             Int32.TryParse(textBox_CurveNumberOfSegments.Text, out CurveNumberOfSegments);
+            CreateWallElevationSettingsItem.CurveNumberOfSegments = textBox_CurveNumberOfSegments.Text;
 
             SelectedViewSheet = comboBox_PlaceOnSheet.SelectedItem as ViewSheet;
+            CreateWallElevationSettingsItem.SelectedViewSheetName = SelectedViewSheet.Name;
+
+            CreateWallElevationSettingsItem.SaveSettings();
         }
     }
 }

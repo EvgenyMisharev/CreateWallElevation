@@ -88,6 +88,7 @@
   <ItemGroup>
     <Compile Include="AlphanumComparatorFastString.cs" />
     <Compile Include="CreateWallElevationCommand.cs" />
+    <Compile Include="CreateWallElevationSettings.cs" />
     <Compile Include="CreateWallElevationWPF.xaml.cs">
       <DependentUpon>CreateWallElevationWPF.xaml</DependentUpon>
     </Compile>
