@@ -8,7 +8,7 @@ using System.Xml.Serialization;
 
 namespace CreateWallElevation
 {
-    class CreateWallElevationSettings
+    public class CreateWallElevationSettings
     {
         public string SelectedViewFamilyTypeName { get; set; }
         public bool UseTemplate { get; set; }

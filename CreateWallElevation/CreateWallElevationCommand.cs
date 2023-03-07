@@ -111,6 +111,10 @@ namespace CreateWallElevation
 
                             foreach (Curve curve in tmpRoomCurves)
                             {
+                                if (curve.Length < 100 / 304.8) 
+                                {
+                                    continue;
+                                }
                                 if (tmpCurve == null)
                                 {
                                     tmpStartCurve = curve;
@@ -155,7 +159,9 @@ namespace CreateWallElevation
                                         }
                                         else
                                         {
-                                            if ((curve as Line).Direction.IsAlmostEqualTo((tmpCurve as Line).Direction))
+                                            double angle1 = (curve as Line).Direction.AngleTo(Line.CreateBound(tmpCurve.GetEndPoint(0), curve.GetEndPoint(1)).Direction);
+
+                                            if ((curve as Line).Direction.IsAlmostEqualTo((tmpCurve as Line).Direction) && Math.Round(angle1, 6) == 0)
                                             {
                                                 if (tmpRoomCurves.IndexOf(curve) != tmpRoomCurves.Count - 1)
                                                 {
@@ -165,7 +171,9 @@ namespace CreateWallElevation
                                                 }
                                                 else
                                                 {
-                                                    if((curve as Line).Direction.IsAlmostEqualTo((tmpStartCurve as Line).Direction))
+                                                    double angle2 = (curve as Line).Direction.AngleTo(Line.CreateBound(curve.GetEndPoint(0), tmpStartCurve.GetEndPoint(1)).Direction);
+
+                                                    if ((curve as Line).Direction.IsAlmostEqualTo((tmpStartCurve as Line).Direction) && Math.Round(angle2, 6) == 0)
                                                     {
                                                         tmpCurve = Line.CreateBound(tmpCurveStartPoint, tmpStartCurve.GetEndPoint(1)) as Curve;
                                                         roomCurves.Add(tmpCurve);
@@ -367,19 +375,212 @@ namespace CreateWallElevation
                                 {
                                     if (curve is Line)
                                     {
+                                        XYZ start = curve.GetEndPoint(0);
+                                        XYZ end = curve.GetEndPoint(1);
+                                        XYZ curveDir = (end - start).Normalize();
+                                        double w = (end - start).GetLength();
 
-                                    }  
+                                        Transform curveTransform = curve.ComputeDerivatives(0.5, true);
+                                        XYZ origin = curveTransform.Origin;
+                                        XYZ right = curveDir;
+                                        XYZ up = XYZ.BasisZ;
+                                        XYZ viewdir = curveDir.CrossProduct(up).Normalize().Negate();
+
+                                        BoundingBoxXYZ roomBb = room.get_BoundingBox(null);
+                                        double minZ = roomBb.Min.Z;
+                                        double maxZ = roomBb.Max.Z;
+
+                                        origin = origin - indent * viewdir.Negate();
+
+                                        ElevationMarker marker = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
+                                        ViewSection viewSection = marker.CreateElevation(doc, doc.ActiveView.Id, 0);
+
+                                        double angle = viewdir.AngleOnPlaneTo(viewSection.ViewDirection, XYZ.BasisZ);
+                                        if (angle != 0)
+                                        {
+                                            ElementTransformUtils.RotateElement(doc, marker.Id, Line.CreateBound(origin, origin + 1 * XYZ.BasisZ), -angle);
+                                        }
+                                        viewSection.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(projectionDepth);
+                                        ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
+
+                                        XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
+                                        XYZ p2 = new XYZ(p1.X, p1.Y, maxZ + indentUp);
+                                        XYZ p3 = p2 + w * right;
+                                        XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
+
+                                        List<Curve> curveList = new List<Curve>();
+                                        curveList.Add(Line.CreateBound(p1, p2));
+                                        curveList.Add(Line.CreateBound(p2, p3));
+                                        curveList.Add(Line.CreateBound(p3, p4));
+                                        curveList.Add(Line.CreateBound(p4, p1));
+
+                                        CurveLoop curveLoop = CurveLoop.Create(curveList);
+                                        crsm.SetCropShape(curveLoop);
+
+                                        doc.Regenerate();
+                                        viewSection.Name = $"Ф_П{room.Number}_{cnt}_{viewSection.Id}";
+                                        cnt++;
+
+                                        if (useTemplate)
+                                        {
+                                            viewSection.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).Set(viewSectionTemplate.Id);
+                                        }
+                                        viewSectionsList.Add(viewSection);
+                                    }
                                     else
                                     {
+                                        XYZ center = (curve as Arc).Center;
+                                        XYZ start = curve.GetEndPoint(0) + indent * (center - curve.GetEndPoint(0)).Normalize();
+                                        XYZ end = curve.GetEndPoint(1) + indent * (center - curve.GetEndPoint(1)).Normalize();
 
+                                        XYZ startVector = (start - center).Normalize();
+                                        XYZ endVector = (end - center).Normalize();
+
+                                        double startEndAngle = endVector.AngleTo(startVector);
+                                        double anglePerSegment = startEndAngle / curveNumberOfSegments;
+
+                                        XYZ startEndLineCenter = (start + end) / 2;
+                                        XYZ v1 = (startEndLineCenter - center).Normalize();
+                                        XYZ v2 = (startEndLineCenter - (room.Location as LocationPoint).Point).Normalize();
+                                        double angle = v1.AngleTo(v2) * (180 / Math.PI);
+
+                                        if (angle <= 45)
+                                        {
+                                            start = curve.GetEndPoint(0) + indent * (center - curve.GetEndPoint(0)).Normalize();
+                                            end = curve.GetEndPoint(1) + indent * (center - curve.GetEndPoint(1)).Normalize();
+
+                                            List<XYZ> arcPoints = new List<XYZ>() { start };
+                                            for (int i = 1; i < curveNumberOfSegments; i++)
+                                            {
+                                                Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), i * anglePerSegment, center);
+                                                XYZ rotatedVector = rotationTransform.OfPoint(start);
+                                                arcPoints.Add(rotatedVector);
+                                            }
+                                            arcPoints.Add(end);
+
+                                            for (int i = 0; i < arcPoints.Count - 1; i++)
+                                            {
+                                                XYZ tmpStart = arcPoints[i];
+                                                XYZ tmpEnd = arcPoints[i + 1];
+                                                XYZ curveDir = (tmpEnd - tmpStart).Normalize();
+                                                double w = (tmpEnd - tmpStart).GetLength();
+
+                                                XYZ origin = (tmpStart + tmpEnd) / 2;
+                                                XYZ right = curveDir;
+                                                XYZ up = XYZ.BasisZ;
+                                                XYZ viewdir = curveDir.CrossProduct(up).Normalize().Negate();
+
+                                                BoundingBoxXYZ roomBb = room.get_BoundingBox(null);
+                                                double minZ = roomBb.Min.Z;
+                                                double maxZ = roomBb.Max.Z;
+
+                                                ElevationMarker marker = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
+                                                ViewSection viewSection = marker.CreateElevation(doc, doc.ActiveView.Id, 0);
+
+                                                double angleViewDirection = viewdir.AngleOnPlaneTo(viewSection.ViewDirection, XYZ.BasisZ);
+                                                if (angleViewDirection != 0)
+                                                {
+                                                    ElementTransformUtils.RotateElement(doc, marker.Id, Line.CreateBound(origin, origin + 1 * XYZ.BasisZ), -angleViewDirection);
+                                                }
+                                                viewSection.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(projectionDepth);
+                                                ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
+
+                                                XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
+                                                XYZ p2 = new XYZ(p1.X, p1.Y, maxZ + indentUp);
+                                                XYZ p3 = p2 + w * right;
+                                                XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
+
+                                                List<Curve> curveList = new List<Curve>();
+                                                curveList.Add(Line.CreateBound(p1, p2));
+                                                curveList.Add(Line.CreateBound(p2, p3));
+                                                curveList.Add(Line.CreateBound(p3, p4));
+                                                curveList.Add(Line.CreateBound(p4, p1));
+
+                                                CurveLoop curveLoop = CurveLoop.Create(curveList);
+                                                crsm.SetCropShape(curveLoop);
+
+                                                doc.Regenerate();
+                                                viewSection.Name = $"Ф_П{room.Number}_{cnt}_{viewSection.Id}";
+                                                cnt++;
+
+                                                if (useTemplate)
+                                                {
+                                                    viewSection.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).Set(viewSectionTemplate.Id);
+                                                }
+                                                viewSectionsList.Add(viewSection);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            start = curve.GetEndPoint(0) - indent * (center - curve.GetEndPoint(0)).Normalize();
+                                            end = curve.GetEndPoint(1) - indent * (center - curve.GetEndPoint(1)).Normalize();
+
+                                            List<XYZ> arcPoints = new List<XYZ>() { start };
+                                            for (int i = 1; i < curveNumberOfSegments; i++)
+                                            {
+                                                Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), -i * anglePerSegment, center);
+                                                XYZ rotatedVector = rotationTransform.OfPoint(start);
+                                                arcPoints.Add(rotatedVector);
+                                            }
+                                            arcPoints.Add(end);
+
+                                            for (int i = 0; i < arcPoints.Count - 1; i++)
+                                            {
+                                                XYZ tmpStart = arcPoints[i];
+                                                XYZ tmpEnd = arcPoints[i + 1];
+                                                XYZ curveDir = (tmpEnd - tmpStart).Normalize();
+                                                double w = (tmpEnd - tmpStart).GetLength();
+
+                                                XYZ origin = (tmpStart + tmpEnd) / 2;
+                                                XYZ right = curveDir;
+                                                XYZ up = XYZ.BasisZ;
+                                                XYZ viewdir = curveDir.CrossProduct(up).Normalize().Negate();
+
+                                                BoundingBoxXYZ roomBb = room.get_BoundingBox(null);
+                                                double minZ = roomBb.Min.Z;
+                                                double maxZ = roomBb.Max.Z;
+
+                                                ElevationMarker marker = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
+                                                ViewSection viewSection = marker.CreateElevation(doc, doc.ActiveView.Id, 0);
+
+                                                double angleViewDirection = viewdir.AngleOnPlaneTo(viewSection.ViewDirection, XYZ.BasisZ);
+                                                if (angleViewDirection != 0)
+                                                {
+                                                    ElementTransformUtils.RotateElement(doc, marker.Id, Line.CreateBound(origin, origin + 1 * XYZ.BasisZ), -angleViewDirection);
+                                                }
+                                                viewSection.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(projectionDepth);
+                                                ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
+
+                                                XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
+                                                XYZ p2 = new XYZ(p1.X, p1.Y, maxZ + indentUp);
+                                                XYZ p3 = p2 + w * right;
+                                                XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
+
+                                                List<Curve> curveList = new List<Curve>();
+                                                curveList.Add(Line.CreateBound(p1, p2));
+                                                curveList.Add(Line.CreateBound(p2, p3));
+                                                curveList.Add(Line.CreateBound(p3, p4));
+                                                curveList.Add(Line.CreateBound(p4, p1));
+
+                                                CurveLoop curveLoop = CurveLoop.Create(curveList);
+                                                crsm.SetCropShape(curveLoop);
+
+                                                doc.Regenerate();
+                                                viewSection.Name = $"Ф_П{room.Number}_{cnt}_{viewSection.Id}";
+                                                cnt++;
+
+                                                if (useTemplate)
+                                                {
+                                                    viewSection.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).Set(viewSectionTemplate.Id);
+                                                }
+                                                viewSectionsList.Add(viewSection);
+                                            }
+                                        }
                                     }
-                                    TaskDialog.Show("Revit", "Фасады в разработке...");
-                                    return Result.Cancelled;
-                                    //ElevationMarker em = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
-                                    //em.CreateElevation(doc, doc.ActiveView.Id, 0);
                                 }
                             }
 
+                            doc.Regenerate();
                             if (selectedViewSheet != null)
                             {
                                 List<FamilyInstance> titleBlocksList = new FilteredElementCollector(doc, selectedViewSheet.Id)
@@ -398,7 +599,8 @@ namespace CreateWallElevation
 
                                     insertPoint = new XYZ(minX + 30/304.8, maxY - 20 / 304.8 - additionalOffset, 0);
                                 }
-                                                                
+
+                                viewSectionsList.Reverse();
                                 double maxHight = 0;
                                 foreach (ViewSection viewSection in viewSectionsList)
                                 {
@@ -423,9 +625,7 @@ namespace CreateWallElevation
                                 additionalOffset += maxHight + UnitUtils.ConvertToInternalUnits(20, DisplayUnitType.DUT_MILLIMETERS);
 #else
                                 additionalOffset += maxHight + UnitUtils.ConvertToInternalUnits(20, UnitTypeId.Millimeters);
-
 #endif
-                                
                             }
                         }   
                     }
@@ -593,8 +793,8 @@ namespace CreateWallElevation
 
                                     BoundingBoxXYZ sectionBox = new BoundingBoxXYZ();
                                     sectionBox.Transform = transform;
-                                    sectionBox.Min = new XYZ(-w / 2, minZ + indentDown, /*-indent - wall.Width / 2*/ 0);
-                                    sectionBox.Max = new XYZ(w / 2, maxZ + indentUp, projectionDepth /*- indent - wall.Width / 2*/);
+                                    sectionBox.Min = new XYZ(-w / 2, minZ + indentDown, 0);
+                                    sectionBox.Max = new XYZ(w / 2, maxZ + indentUp, projectionDepth);
 
                                     ViewSection viewSection = ViewSection.CreateSection(doc, selectedViewFamilyType.Id, sectionBox);
                                     viewSection.Name = $"Р_Ст_{viewSection.Id}";
@@ -609,12 +809,193 @@ namespace CreateWallElevation
                         }
                         else
                         {
-                            TaskDialog.Show("Revit", "Фасады в разработке...");
-                            return Result.Cancelled;
-                            //ElevationMarker em = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
-                            //em.CreateElevation(doc, doc.ActiveView.Id, 0);
+                            XYZ wallOrientation = null;
+                            if (wall.Flipped)
+                            {
+                                wallOrientation = wall.Orientation.Negate();
+                            }
+                            else
+                            {
+                                wallOrientation = wall.Orientation;
+                            }
+                            Curve curve = (wall.Location as LocationCurve).Curve;
+
+                            if (curve is Line)
+                            {
+                                XYZ start = curve.GetEndPoint(0);
+                                XYZ end = curve.GetEndPoint(1);
+
+                                XYZ pointH = curve.Project(new XYZ(pickedPoint.X, pickedPoint.Y, start.Z)).XYZPoint;
+                                XYZ normalVector = (new XYZ(pickedPoint.X, pickedPoint.Y, start.Z) - pointH).Normalize();
+
+                                if (normalVector.IsAlmostEqualTo(wallOrientation))
+                                {
+                                    start = curve.GetEndPoint(1);
+                                    end = curve.GetEndPoint(0);
+                                }
+                                else
+                                {
+                                    start = curve.GetEndPoint(0);
+                                    end = curve.GetEndPoint(1);
+                                }
+
+                                XYZ curveDir = (end - start).Normalize();
+                                double w = (end - start).GetLength();
+
+                                Transform curveTransform = curve.ComputeDerivatives(0.5, true);
+                                XYZ origin = curveTransform.Origin;
+                                XYZ right = curveDir;
+                                XYZ up = XYZ.BasisZ;
+                                XYZ viewdir = curveDir.CrossProduct(up).Normalize();
+
+                                BoundingBoxXYZ wallBb = wall.get_BoundingBox(null);
+                                double minZ = wallBb.Min.Z;
+                                double maxZ = wallBb.Max.Z;
+
+                                origin = origin - (wall.Width / 2) * viewdir.Negate() - indent * viewdir.Negate();
+
+                                ElevationMarker marker = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
+                                ViewSection viewSection = marker.CreateElevation(doc, doc.ActiveView.Id, 0);
+
+                                double angle = viewdir.AngleOnPlaneTo(viewSection.ViewDirection, XYZ.BasisZ);
+                                if (angle != 0)
+                                {
+                                    ElementTransformUtils.RotateElement(doc, marker.Id, Line.CreateBound(origin, origin + 1 * XYZ.BasisZ), -angle);
+                                }
+                                viewSection.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(projectionDepth);
+                                ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
+
+                                XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
+                                XYZ p2 = new XYZ (p1.X, p1.Y, maxZ + indentUp);
+                                XYZ p3 = p2 + w * right;
+                                XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
+
+                                List<Curve> curveList = new List<Curve>();
+                                curveList.Add(Line.CreateBound(p1, p2));
+                                curveList.Add(Line.CreateBound(p2, p3));
+                                curveList.Add(Line.CreateBound(p3, p4));
+                                curveList.Add(Line.CreateBound(p4, p1));
+
+                                CurveLoop curveLoop = CurveLoop.Create(curveList);
+                                crsm.SetCropShape(curveLoop);
+
+                                doc.Regenerate();
+                                viewSection.Name = $"Ф_Ст_{viewSection.Id}";
+
+                                if (useTemplate)
+                                {
+                                    viewSection.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).Set(viewSectionTemplate.Id);
+                                }
+                                viewSectionsList.Add(viewSection);
+                            }
+                            else
+                            {
+                                XYZ center = (curve as Arc).Center;
+                                Curve pickPointLine = Line.CreateBound(center, pickedPoint) as Curve;
+                                XYZ start = null;
+                                XYZ end = null;
+                                if (curve.Intersect(pickPointLine) != SetComparisonResult.Overlap)
+                                {
+                                    start = curve.GetEndPoint(0) + indent * (center - curve.GetEndPoint(0)).Normalize() + wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
+                                    end = curve.GetEndPoint(1) + indent * (center - curve.GetEndPoint(1)).Normalize() + wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
+                                }
+                                else
+                                {
+                                    start = curve.GetEndPoint(0) - indent * (center - curve.GetEndPoint(0)).Normalize() - wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
+                                    end = curve.GetEndPoint(1) - indent * (center - curve.GetEndPoint(1)).Normalize() - wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
+                                }
+                                XYZ arcNormal = (start - center).Normalize();
+
+                                XYZ startVector = (start - center).Normalize();
+                                XYZ endVector = (end - center).Normalize();
+
+                                double startEndAngle = endVector.AngleTo(startVector);
+                                double anglePerSegment = startEndAngle / curveNumberOfSegments;
+
+                                List<XYZ> arcPoints = new List<XYZ>() { start };
+                                if (arcNormal.IsAlmostEqualTo(wallOrientation))
+                                {
+                                    for (int i = 1; i < curveNumberOfSegments; i++)
+                                    {
+                                        Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), -i * anglePerSegment, center);
+                                        XYZ rotatedVector = rotationTransform.OfPoint(start);
+                                        arcPoints.Add(rotatedVector);
+                                    }
+                                }
+                                else
+                                {
+                                    for (int i = 1; i < curveNumberOfSegments; i++)
+                                    {
+                                        Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), i * anglePerSegment, center);
+                                        XYZ rotatedVector = rotationTransform.OfPoint(start);
+                                        arcPoints.Add(rotatedVector);
+                                    }
+                                }
+                                arcPoints.Add(end);
+
+                                if (curve.Intersect(pickPointLine) != SetComparisonResult.Overlap)
+                                {
+                                    arcPoints.Reverse();
+                                }
+                                if (!arcNormal.IsAlmostEqualTo(wallOrientation))
+                                {
+                                    arcPoints.Reverse();
+                                }
+
+                                for (int i = 0; i < arcPoints.Count - 1; i++)
+                                {
+                                    XYZ tmpStart = arcPoints[i];
+                                    XYZ tmpEnd = arcPoints[i + 1];
+                                    XYZ curveDir = (tmpEnd - tmpStart).Normalize();
+                                    double w = (tmpEnd - tmpStart).GetLength();
+
+                                    XYZ origin = (tmpStart + tmpEnd) / 2;
+                                    XYZ right = curveDir;
+                                    XYZ up = XYZ.BasisZ;
+                                    XYZ viewdir = curveDir.CrossProduct(up).Normalize().Negate();
+
+                                    BoundingBoxXYZ wallBb = wall.get_BoundingBox(null);
+                                    double minZ = wallBb.Min.Z;
+                                    double maxZ = wallBb.Max.Z;
+
+                                    ElevationMarker marker = ElevationMarker.CreateElevationMarker(doc, selectedViewFamilyType.Id, origin, 100);
+                                    ViewSection viewSection = marker.CreateElevation(doc, doc.ActiveView.Id, 0);
+
+                                    double angle = viewdir.AngleOnPlaneTo(viewSection.ViewDirection, XYZ.BasisZ);
+                                    if (angle != 0)
+                                    {
+                                        ElementTransformUtils.RotateElement(doc, marker.Id, Line.CreateBound(origin, origin + 1 * XYZ.BasisZ), -angle);
+                                    }
+                                    viewSection.get_Parameter(BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(projectionDepth);
+                                    ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
+
+                                    XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
+                                    XYZ p2 = new XYZ(p1.X, p1.Y, maxZ + indentUp);
+                                    XYZ p3 = p2 + w * right;
+                                    XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
+
+                                    List<Curve> curveList = new List<Curve>();
+                                    curveList.Add(Line.CreateBound(p1, p2));
+                                    curveList.Add(Line.CreateBound(p2, p3));
+                                    curveList.Add(Line.CreateBound(p3, p4));
+                                    curveList.Add(Line.CreateBound(p4, p1));
+
+                                    CurveLoop curveLoop = CurveLoop.Create(curveList);
+                                    crsm.SetCropShape(curveLoop);
+
+                                    doc.Regenerate();
+                                    viewSection.Name = $"Ф_Ст_{viewSection.Id}";
+
+                                    if (useTemplate)
+                                    {
+                                        viewSection.get_Parameter(BuiltInParameter.VIEW_TEMPLATE).Set(viewSectionTemplate.Id);
+                                    }
+                                    viewSectionsList.Add(viewSection);
+                                }
+                            }
                         }
 
+                        doc.Regenerate();
                         if (selectedViewSheet != null)
                         {
                             List<FamilyInstance> titleBlocksList = new FilteredElementCollector(doc, selectedViewSheet.Id)
@@ -634,6 +1015,7 @@ namespace CreateWallElevation
                                 insertPoint = new XYZ(minX + 30 / 304.8, maxY - 20 / 304.8, 0);
                             }
 
+                            viewSectionsList.Reverse();
                             double maxHight = 0;
                             foreach (ViewSection viewSection in viewSectionsList)
                             {
