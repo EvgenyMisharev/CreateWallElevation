@@ -2,13 +2,13 @@
 <CreateWallElevationSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SelectedViewFamilyTypeName>Направление взгляда</SelectedViewFamilyTypeName>
   <UseTemplate>true</UseTemplate>
-  <ViewSectionTemplateName>ADSK_АР_О_Ф_Цветной</ViewSectionTemplateName>
+  <ViewSectionTemplateName>ADSK_АР_О_Р_Оформленный</ViewSectionTemplateName>
   <SelectedBuildByName>rbt_ByRoom</SelectedBuildByName>
   <SelectedUseToBuildName>rbt_Facade</SelectedUseToBuildName>
-  <Indent>0</Indent>
+  <Indent>50</Indent>
   <IndentUp>0</IndentUp>
   <IndentDown>0</IndentDown>
   <ProjectionDepth>500</ProjectionDepth>
   <CurveNumberOfSegments>5</CurveNumberOfSegments>
-  <SelectedViewSheetName>Тест</SelectedViewSheetName>
+  <SelectedViewSheetName>Обложка</SelectedViewSheetName>
 </CreateWallElevationSettings>

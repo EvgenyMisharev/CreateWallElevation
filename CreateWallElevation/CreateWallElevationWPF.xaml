@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              Title="Развертки стен" Height="560" Width="300" 
              MinHeight="560" MinWidth="300" MaxHeight="560" MaxWidth="300"
-             WindowStyle="ToolWindow" WindowStartupLocation="CenterScreen" KeyDown="CreateWallElevationWPF_KeyDown">
+             WindowStyle="SingleBorderWindow" ResizeMode="NoResize" Icon="Resources/citrus.ico" WindowStartupLocation="CenterScreen" KeyDown="CreateWallElevationWPF_KeyDown">
     <Grid>
         <Label x:Name="label_SelectTypeSectionFacade" Content="Выберите тип Разреза/Фасада" Margin="10,140,10,0" VerticalAlignment="Top"/>
         <ComboBox x:Name="comboBox_SelectTypeSectionFacade" Margin="10,166,10,0" VerticalAlignment="Top" Height="26" VerticalContentAlignment="Center"/>
