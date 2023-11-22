@@ -36,7 +36,7 @@ namespace CreateWallElevation
 
             if (CreateWallElevationSettingsItem != null)
             {
-                if(CreateWallElevationSettingsItem.SelectedBuildByName == "rbt_ByRoom")
+                if (CreateWallElevationSettingsItem.SelectedBuildByName == "rbt_ByRoom")
                 {
                     rbt_ByRoom.IsChecked = true;
                 }
@@ -167,7 +167,7 @@ namespace CreateWallElevation
 
             comboBox_SelectTypeSectionFacade.ItemsSource = ViewFamilyTypeList;
             comboBox_SelectTypeSectionFacade.DisplayMemberPath = "Name";
-            if(ViewFamilyTypeList.Count != 0)
+            if (ViewFamilyTypeList.Count != 0)
             {
                 comboBox_SelectTypeSectionFacade.SelectedItem = comboBox_SelectTypeSectionFacade.Items[0];
             }
@@ -203,7 +203,7 @@ namespace CreateWallElevation
             CreateWallElevationSettingsItem = new CreateWallElevationSettings();
 
             SelectedViewFamilyType = comboBox_SelectTypeSectionFacade.SelectedItem as ViewFamilyType;
-            if(SelectedViewFamilyType != null)
+            if (SelectedViewFamilyType != null)
             {
                 CreateWallElevationSettingsItem.SelectedViewFamilyTypeName = SelectedViewFamilyType.Name;
             }

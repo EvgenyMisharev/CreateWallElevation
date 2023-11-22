@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <CreateWallElevationSettings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <SelectedViewFamilyTypeName>Направление взгляда</SelectedViewFamilyTypeName>
+  <SelectedViewFamilyTypeName>Вспомогательный</SelectedViewFamilyTypeName>
   <UseTemplate>true</UseTemplate>
-  <ViewSectionTemplateName>ADSK_АР_О_Р_Оформленный</ViewSectionTemplateName>
+  <ViewSectionTemplateName>ADSK_АР_В_Р</ViewSectionTemplateName>
   <SelectedBuildByName>rbt_ByRoom</SelectedBuildByName>
-  <SelectedUseToBuildName>rbt_Facade</SelectedUseToBuildName>
+  <SelectedUseToBuildName>rbt_Section</SelectedUseToBuildName>
   <Indent>50</Indent>
   <IndentUp>0</IndentUp>
   <IndentDown>0</IndentDown>
   <ProjectionDepth>500</ProjectionDepth>
   <CurveNumberOfSegments>5</CurveNumberOfSegments>
-  <SelectedViewSheetName>Обложка</SelectedViewSheetName>
+  <SelectedViewSheetName>Первый лист изменений</SelectedViewSheetName>
 </CreateWallElevationSettings>

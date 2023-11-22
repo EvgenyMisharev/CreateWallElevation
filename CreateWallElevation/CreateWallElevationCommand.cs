@@ -4,9 +4,9 @@ using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Selection;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 
 namespace CreateWallElevation
 {
@@ -15,6 +15,12 @@ namespace CreateWallElevation
     {
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
+            try
+            {
+                GetPluginStartInfo();
+            }
+            catch { }
+
             Document doc = commandData.Application.ActiveUIDocument.Document;
             Selection sel = commandData.Application.ActiveUIDocument.Selection;
 
@@ -111,7 +117,7 @@ namespace CreateWallElevation
 
                             foreach (Curve curve in tmpRoomCurves)
                             {
-                                if (curve.Length < 100 / 304.8) 
+                                if (curve.Length < 100 / 304.8)
                                 {
                                     continue;
                                 }
@@ -124,7 +130,7 @@ namespace CreateWallElevation
                                 }
                                 else
                                 {
-                                    if(curve is Arc)
+                                    if (curve is Arc)
                                     {
                                         if (tmpRoomCurves.IndexOf(curve) != tmpRoomCurves.Count - 1)
                                         {
@@ -142,7 +148,7 @@ namespace CreateWallElevation
                                     }
                                     else
                                     {
-                                        if(tmpCurve is Arc)
+                                        if (tmpCurve is Arc)
                                         {
                                             if (tmpRoomCurves.IndexOf(curve) != tmpRoomCurves.Count - 1)
                                             {
@@ -265,7 +271,7 @@ namespace CreateWallElevation
                                         XYZ v2 = (startEndLineCenter - (room.Location as LocationPoint).Point).Normalize();
                                         double angle = v1.AngleTo(v2) * (180 / Math.PI);
 
-                                        if(angle <= 45)
+                                        if (angle <= 45)
                                         {
                                             start = curve.GetEndPoint(0) + indent * (center - curve.GetEndPoint(0)).Normalize();
                                             end = curve.GetEndPoint(1) + indent * (center - curve.GetEndPoint(1)).Normalize();
@@ -325,7 +331,7 @@ namespace CreateWallElevation
                                             List<XYZ> arcPoints = new List<XYZ>() { start };
                                             for (int i = 1; i < curveNumberOfSegments; i++)
                                             {
-                                                Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), - i * anglePerSegment, center);
+                                                Transform rotationTransform = Transform.CreateRotationAtPoint(new XYZ(0, 0, 1), -i * anglePerSegment, center);
                                                 XYZ rotatedVector = rotationTransform.OfPoint(start);
                                                 arcPoints.Add(rotatedVector);
                                             }
@@ -597,7 +603,7 @@ namespace CreateWallElevation
                                     double minX = bb.Min.X;
                                     double maxY = bb.Max.Y;
 
-                                    insertPoint = new XYZ(minX + 30/304.8, maxY - 20 / 304.8 - additionalOffset, 0);
+                                    insertPoint = new XYZ(minX + 30 / 304.8, maxY - 20 / 304.8 - additionalOffset, 0);
                                 }
 
                                 viewSectionsList.Reverse();
@@ -616,7 +622,7 @@ namespace CreateWallElevation
                                     ElementTransformUtils.MoveElement(doc, viewport.Id, new XYZ(deltaX, -deltaY, 0));
 
                                     insertPoint = new XYZ(insertPoint.X + deltaX * 2, insertPoint.Y, insertPoint.Z);
-                                    if(deltaY * 2 > maxHight)
+                                    if (deltaY * 2 > maxHight)
                                     {
                                         maxHight = deltaY * 2;
                                     }
@@ -627,7 +633,7 @@ namespace CreateWallElevation
                                 additionalOffset += maxHight + UnitUtils.ConvertToInternalUnits(20, UnitTypeId.Millimeters);
 #endif
                             }
-                        }   
+                        }
                     }
                 }
                 else
@@ -653,7 +659,7 @@ namespace CreateWallElevation
                         if (selectedUseToBuildName == "rbt_Section")
                         {
                             XYZ wallOrientation = null;
-                            if(wall.Flipped)
+                            if (wall.Flipped)
                             {
                                 wallOrientation = wall.Orientation.Negate();
                             }
@@ -725,7 +731,7 @@ namespace CreateWallElevation
                                 {
                                     start = curve.GetEndPoint(0) + indent * (center - curve.GetEndPoint(0)).Normalize() + wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
                                     end = curve.GetEndPoint(1) + indent * (center - curve.GetEndPoint(1)).Normalize() + wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
-                                }    
+                                }
                                 else
                                 {
                                     start = curve.GetEndPoint(0) - indent * (center - curve.GetEndPoint(0)).Normalize() - wall.Width / 2 * (center - curve.GetEndPoint(0)).Normalize();
@@ -866,7 +872,7 @@ namespace CreateWallElevation
                                 ViewCropRegionShapeManager crsm = viewSection.GetCropRegionShapeManager();
 
                                 XYZ p1 = new XYZ(origin.X, origin.Y, minZ + indentDown) - w / 2 * right;
-                                XYZ p2 = new XYZ (p1.X, p1.Y, maxZ + indentUp);
+                                XYZ p2 = new XYZ(p1.X, p1.Y, maxZ + indentUp);
                                 XYZ p3 = p2 + w * right;
                                 XYZ p4 = new XYZ(p3.X, p3.Y, p1.Z);
 
@@ -1064,6 +1070,27 @@ namespace CreateWallElevation
             }
             tempRoomsList = tempRoomsList.OrderBy(r => r.Number, new AlphanumComparatorFastString()).ThenBy(r => r.Name, new AlphanumComparatorFastString()).ToList();
             return tempRoomsList;
+        }
+        private static void GetPluginStartInfo()
+        {
+            // Получаем сборку, в которой выполняется текущий код
+            Assembly thisAssembly = Assembly.GetExecutingAssembly();
+            string assemblyName = "CreateWallElevation";
+            string assemblyNameRus = "Развертки стен";
+            string assemblyFolderPath = Path.GetDirectoryName(thisAssembly.Location);
+
+            int lastBackslashIndex = assemblyFolderPath.LastIndexOf("\\");
+            string dllPath = assemblyFolderPath.Substring(0, lastBackslashIndex + 1) + "PluginInfoCollector\\PluginInfoCollector.dll";
+
+            Assembly assembly = Assembly.LoadFrom(dllPath);
+            Type type = assembly.GetType("PluginInfoCollector.InfoCollector");
+            var constructor = type.GetConstructor(new Type[] { typeof(string), typeof(string) });
+
+            if (type != null)
+            {
+                // Создание экземпляра класса
+                object instance = Activator.CreateInstance(type, new object[] { assemblyName, assemblyNameRus });
+            }
         }
     }
 }
