@@ -192,7 +192,7 @@
         </Reference>
       </ItemGroup>
     </When>
-	<When Condition=" '$(Configuration)'=='R2024' ">
+    <When Condition=" '$(Configuration)'=='R2024' ">
       <ItemGroup>
         <Reference Include="RevitAPI">
           <HintPath>C:\Program Files\Autodesk\Revit 2024\RevitAPI.dll</HintPath>

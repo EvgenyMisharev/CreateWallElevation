@@ -234,7 +234,7 @@ namespace CreateWallElevation
                                         double maxZ = roomBb.Max.Z;
 
                                         Transform transform = Transform.Identity;
-                                        transform.Origin = origin;
+                                        transform.Origin = new XYZ(origin.X, origin.Y, 0);
                                         transform.BasisX = right;
                                         transform.BasisY = up;
                                         transform.BasisZ = viewdir;
@@ -302,7 +302,7 @@ namespace CreateWallElevation
                                                 double maxZ = roomBb.Max.Z;
 
                                                 Transform transform = Transform.Identity;
-                                                transform.Origin = origin;
+                                                transform.Origin = new XYZ(origin.X, origin.Y, 0);
                                                 transform.BasisX = right;
                                                 transform.BasisY = up;
                                                 transform.BasisZ = viewdir;
@@ -354,7 +354,7 @@ namespace CreateWallElevation
                                                 double maxZ = roomBb.Max.Z;
 
                                                 Transform transform = Transform.Identity;
-                                                transform.Origin = origin;
+                                                transform.Origin = new XYZ(origin.X, origin.Y, 0);
                                                 transform.BasisX = right;
                                                 transform.BasisY = up;
                                                 transform.BasisZ = viewdir;
@@ -702,7 +702,7 @@ namespace CreateWallElevation
                                 double maxZ = wallBb.Max.Z;
 
                                 Transform transform = Transform.Identity;
-                                transform.Origin = origin;
+                                transform.Origin = new XYZ(origin.X, origin.Y, 0);
                                 transform.BasisX = right;
                                 transform.BasisY = up;
                                 transform.BasisZ = viewdir;
@@ -792,7 +792,7 @@ namespace CreateWallElevation
                                     double maxZ = wallBb.Max.Z;
 
                                     Transform transform = Transform.Identity;
-                                    transform.Origin = origin;
+                                    transform.Origin = new XYZ(origin.X, origin.Y, 0);
                                     transform.BasisX = right;
                                     transform.BasisY = up;
                                     transform.BasisZ = viewdir;
@@ -1049,12 +1049,7 @@ namespace CreateWallElevation
             }
             return Result.Succeeded;
         }
-        /// <summary>
-        /// Получение списка выбранных через интерфейс помещений
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="sel"></param>
-        /// <returns>Список помещений</returns>
+
         private static List<Room> GetRoomsFromCurrentSelection(Document doc, Selection sel)
         {
             ICollection<ElementId> selectedIds = sel.GetElementIds();
